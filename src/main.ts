@@ -221,14 +221,13 @@ const app = new Elysia()
 
   .listen({
     port: appConfig.server.port,
-    hostname: appConfig.server.hostname,
   });
 
 console.log(
-  `🦊 Elysia is running at http://${app.server?.hostname}:${app.server?.port}`
+  `🦊 Elysia is running at http://localhost:${appConfig.server.port}`
 );
 console.log(
-  `📊 Health check available at http://${app.server?.hostname}:${app.server?.port}/health`
+  `📊 Health check available at http://localhost:${appConfig.server.port}/health`
 );
 
 // Graceful shutdown
