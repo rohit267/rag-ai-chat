@@ -1,0 +1,30 @@
+{
+  "name": "rag-ai",
+  "module": "src/main.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "bun src/main.ts",
+    "dev": "bun --watch src/main.ts",
+    "build": "bun build src/main.ts --outdir=dist",
+    "clean": "rm -rf dist uploads/*.* store/vectors.db"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@elysiajs/html": "^1.4.0",
+    "@elysiajs/static": "^1.4.7",
+    "@llm-tools/embedjs": "^0.1.31",
+    "@llm-tools/embedjs-libsql": "^0.1.31",
+    "@llm-tools/embedjs-loader-markdown": "^0.1.31",
+    "@llm-tools/embedjs-loader-pdf": "^0.1.31",
+    "@llm-tools/embedjs-loader-web": "^0.1.31",
+    "@llm-tools/embedjs-ollama": "^0.1.31",
+    "@llm-tools/embedjs-openai": "^0.1.31",
+    "elysia": "^1.4.16"
+  }
+}

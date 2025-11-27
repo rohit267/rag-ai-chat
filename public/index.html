@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RAG AI Chat - Intelligent Document Assistant</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://unpkg.com/marked@9.1.2/marked.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>"">
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        display: flex;
+        height: 100vh;
+        margin: 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #2d3748;
+        overflow: hidden;
+      }
+
+      #sidebar {
+        width: 420px;
+        min-width: 380px;
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(20px);
+        border-right: 1px solid rgba(255, 255, 255, 0.3);
+        padding: 16px;
+        overflow-y: auto;
+        box-shadow: 4px 0 30px rgba(0, 0, 0, 0.15);
+      }
+
+      #sidebar h2 {
+        margin: 0 0 16px 0;
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #4a5568;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        border-bottom: 2px solid rgba(102, 126, 234, 0.2);
+        padding-bottom: 8px;
+      }
+
+      .form-group {
+        margin-bottom: 16px;
+        display: block !important;
+        visibility: visible !important;
+      }
+
+      .form-group label {
+        display: block;
+        font-weight: 600;
+        color: #4a5568;
+        margin-bottom: 6px;
+        font-size: 14px;
+      }
+
+      .form-group form {
+        display: block !important;
+        visibility: visible !important;
+      }
+
+      .form-group input {
+        display: block !important;
+        visibility: visible !important;
+      }
+
+      .form-group button {
+        display: inline-block !important;
+        visibility: visible !important;
+      }
+
+      input[type="text"],
+      input[type="file"] {
+        width: 100%;
+        padding: 10px 12px;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 14px;
+        transition: all 0.2s ease;
+        background: rgba(255, 255, 255, 0.9);
+        font-family: inherit;
+      }
+
+      input[type="text"]:focus,
+      input[type="file"]:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        background: #fff;
+      }
+
+      input[type="text"]:hover,
+      input[type="file"]:hover {
+        border-color: #a0aec0;
+      }
+
+      .btn-primary,
+      .btn-success,
+      .btn-danger {
+        padding: 10px 16px;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-family: inherit;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+
+      .btn-primary:hover {
+        opacity: 0.9;
+      }
+
+      .btn-success {
+        background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+        color: white;
+      }
+
+      .btn-success:hover {
+        opacity: 0.9;
+      }
+
+      .btn-danger {
+        background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+        color: white;
+        width: 100%;
+        margin-top: 12px;
+      }
+
+      .btn-danger:hover {
+        opacity: 0.9;
+      }
+
+      #sources-list {
+        margin-top: 16px;
+        padding: 12px;
+        background: rgba(237, 242, 247, 0.6);
+        border-radius: 8px;
+        min-height: 60px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+      }
+
+      .source-item {
+        padding: 8px 12px;
+        margin: 4px 0;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 6px;
+        font-size: 13px;
+        color: #4a5568;
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        transition: all 0.2s ease;
+        cursor: default;
+      }
+
+      .source-item:hover {
+        background: #fff;
+      }
+
+      #sources-list:empty::before {
+        content: '📋 No sources added yet';
+        display: block;
+        text-align: center;
+        color: #999;
+        font-style: italic;
+        padding: 16px;
+      }
+
+      #chat-container {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(20px);
+      }
+
+      #chat-header {
+        padding: 16px 20px;
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(20px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #4a5568;
+      }
+
+      #chat-header span:first-child {
+        font-size: 1.6rem;
+      }
+
+      #chat-header span:last-child {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      #chat-window {
+        flex-grow: 1;
+        padding: 16px 20px;
+        overflow-y: auto;
+        background: rgba(255, 255, 255, 0.97);
+        backdrop-filter: blur(20px);
+        margin: 12px;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+      }
+
+      #chat-window::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      #chat-window::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.05);
+        border-radius: 10px;
+      }
+
+      #chat-window::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 10px;
+      }
+
+      #chat-window::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(135deg, #5a6fd8 0%, #6b4190 100%);
+      }
+
+      #chat-form {
+        padding: 16px 20px;
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(20px);
+        border-top: 1px solid rgba(255, 255, 255, 0.3);
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+
+      #chat-form input[type="text"] {
+        flex-grow: 1;
+        padding: 12px 16px;
+        border: 2px solid #e2e8f0;
+        border-radius: 24px;
+        font-size: 14px;
+        background: rgba(255, 255, 255, 0.9);
+        transition: all 0.2s ease;
+        font-family: inherit;
+      }
+
+      #chat-form input[type="text"]:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        background: #fff;
+      }
+
+      #chat-form input[type="text"]:hover {
+        border-color: #a0aec0;
+      }
+
+      #chat-form button {
+        padding: 12px 20px;
+        border-radius: 24px;
+        white-space: nowrap;
+      }
+
+      .user-message {
+        align-self: flex-end;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 12px 16px;
+        border-radius: 18px 18px 4px 18px;
+        margin-bottom: 8px;
+        max-width: 70%;
+        word-break: break-word;
+        font-weight: 500;
+        line-height: 1.5;
+      }
+
+      .assistant-message {
+        align-self: flex-start;
+        background: rgba(255, 255, 255, 0.95);
+        color: #2d3748;
+        padding: 12px 16px;
+        border-radius: 18px 18px 18px 4px;
+        margin-bottom: 8px;
+        max-width: 75%;
+        word-break: break-word;
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        line-height: 1.6;
+      }
+
+      .assistant-message p {
+        margin: 0 0 12px 0;
+      }
+
+      .assistant-message p:last-child {
+        margin-bottom: 0;
+      }
+
+      .assistant-message h1,
+      .assistant-message h2,
+      .assistant-message h3,
+      .assistant-message h4,
+      .assistant-message h5,
+      .assistant-message h6 {
+        margin: 16px 0 8px 0;
+        font-weight: 700;
+        color: #2d3748;
+      }
+
+      .assistant-message h1:first-child,
+      .assistant-message h2:first-child,
+      .assistant-message h3:first-child,
+      .assistant-message h4:first-child,
+      .assistant-message h5:first-child,
+      .assistant-message h6:first-child {
+        margin-top: 0;
+      }
+
+      .assistant-message strong {
+        font-weight: 700;
+        color: #2d3748;
+      }
+
+      .assistant-message em {
+        font-style: italic;
+        color: #4a5568;
+      }
+
+      .assistant-message code {
+        background: rgba(102, 126, 234, 0.1);
+        color: #667eea;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas,
+          "Courier New", monospace;
+        font-size: 0.9em;
+      }
+
+      .assistant-message pre {
+        background: rgba(45, 55, 72, 0.95);
+        color: #e2e8f0;
+        padding: 16px;
+        border-radius: 8px;
+        overflow-x: auto;
+        margin: 12px 0;
+        font-family: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas,
+          "Courier New", monospace;
+      }
+
+      .assistant-message pre code {
+        background: none;
+        color: inherit;
+        padding: 0;
+        border-radius: 0;
+      }
+
+      .assistant-message ul,
+      .assistant-message ol {
+        margin: 12px 0;
+        padding-left: 24px;
+      }
+
+      .assistant-message li {
+        margin: 4px 0;
+      }
+
+      .assistant-message blockquote {
+        border-left: 4px solid #667eea;
+        margin: 12px 0;
+        padding-left: 16px;
+        font-style: italic;
+        color: #4a5568;
+      }
+
+      .assistant-message a {
+        color: #667eea;
+        text-decoration: underline;
+      }
+
+      .assistant-message a:hover {
+        color: #764ba2;
+      }
+
+      .assistant-message table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 12px 0;
+      }
+
+      .assistant-message th,
+      .assistant-message td {
+        border: 1px solid #e2e8f0;
+        padding: 8px 12px;
+        text-align: left;
+      }
+
+      .assistant-message th {
+        background: rgba(102, 126, 234, 0.1);
+        font-weight: 600;
+      }
+
+      .htmx-indicator {
+        opacity: 0;
+        transition: opacity 300ms ease-in;
+        transform: translateY(10px);
+      }
+
+      .htmx-request .htmx-indicator {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .htmx-request button {
+        opacity: 0.7;
+        pointer-events: none;
+        transform: scale(0.98);
+      }
+
+      /* Loading animation */
+      .loading-dots {
+        display: inline-block;
+        position: relative;
+        width: 30px;
+        height: 8px;
+      }
+
+      .loading-dots div {
+        position: absolute;
+        top: 0;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #667eea;
+      }
+
+      .loading-dots div:nth-child(1) { left: 6px; }
+      .loading-dots div:nth-child(2) { left: 12px; }
+      .loading-dots div:nth-child(3) { left: 18px; }
+
+      /* Success feedback */
+      .success-message {
+        padding: 10px 12px;
+        background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+        color: white;
+        border-radius: 8px;
+        margin: 6px 0;
+      }
+
+      /* Error message styling */
+      .error-message {
+        padding: 10px 12px;
+        background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+        color: white;
+        border-radius: 8px;
+        margin: 6px 0;
+      }
+
+      /* Typing indicator */
+      .typing-indicator {
+        align-self: flex-start;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 12px 16px;
+        border-radius: 18px 18px 18px 4px;
+        margin-bottom: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.6);
+      }
+
+      .typing-dots {
+        display: flex;
+        gap: 3px;
+      }
+
+      .typing-dots span {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #667eea;
+      }
+
+      @media (max-width: 900px) {
+        #sidebar {
+          width: 280px;
+          padding: 16px;
+        }
+
+        #chat-header {
+          padding: 16px 20px;
+          font-size: 1.25rem;
+        }
+
+        #chat-window {
+          margin: 12px;
+          padding: 16px 20px;
+        }
+
+        #chat-form {
+          padding: 16px 20px;
+        }
+      }
+
+      @media (max-width: 768px) {
+        body {
+          flex-direction: column;
+        }
+
+        #sidebar {
+          width: 100%;
+          border-right: none;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+          height: auto;
+          max-height: 40vh;
+        }
+
+        #chat-container {
+          height: 60vh;
+        }
+
+        .user-message,
+        .assistant-message {
+          max-width: 85%;
+        }
+
+        #chat-form input[type="text"] {
+          font-size: 16px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="sidebar">
+      <h2>📚 Knowledge Sources</h2>
+
+      <div class="form-group">
+        <label for="url-input">Add Web Page</label>
+        <form
+          hx-post="/add-source"
+          hx-target="#sources-list"
+          hx-swap="beforeend"
+          hx-indicator="#loading"
+        >
+          <div style="display: flex; gap: 8px">
+            <input
+              id="url-input"
+              type="text"
+              name="url"
+              placeholder="Enter URL (e.g., https://example.com)"
+              required
+            />
+            <button type="submit" class="btn-primary">Add</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="form-group">
+        <label for="file-input">Upload Document</label>
+        <div id="file-size-limit" style="font-size: 12px; color: #666; margin-bottom: 8px;">
+          Max size: 10MB • Formats: PDF, MD, TXT
+        </div>
+        <form
+          hx-encoding="multipart/form-data"
+          hx-post="/add-file"
+          hx-target="#sources-list"
+          hx-swap="beforeend"
+          hx-indicator="#loading"
+        >
+          <div style="display: flex; gap: 8px; align-items: end">
+            <input
+              id="file-input"
+              type="file"
+              name="file"
+              accept=".pdf,.md,.txt"
+              required
+              style="flex: 1"
+            />
+            <button type="submit" class="btn-success">Upload</button>
+          </div>
+          <div id="file-info" style="margin-top: 8px; font-size: 12px; color: #666;"></div>
+        </form>
+      </div>
+
+      <button
+        class="btn-danger"
+        hx-post="/clear-sources"
+        hx-target="#sources-list"
+        hx-swap="innerHTML"
+        hx-confirm="Are you sure you want to clear all sources?"
+        hx-indicator="#loading"
+      >
+        🗑️ Clear All Sources
+      </button>
+
+      <div
+        id="loading"
+        class="htmx-indicator"
+        style="margin-top: 12px; color: #667eea; font-size: 14px; display: flex; align-items: center; gap: 8px; padding: 8px; background: rgba(102, 126, 234, 0.1); border-radius: 8px;"
+      >
+        <div class="loading-dots">
+          <div></div>
+          <div></div>
+          <div></div>
+        </div>
+        <span>Processing...</span>
+      </div>
+      <h3>Current Sources</h3>
+      <div
+        id="sources-list"
+        hx-get="/sources"
+        hx-trigger="load, every 30s, refresh from:body"
+        hx-swap="innerHTML"
+        hx-indicator="#loading"
+      >
+        <div
+          style="
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 20px;
+          "
+        >
+          Loading sources...
+        </div>
+      </div>
+    </div>
+
+    <div id="chat-container">
+      <div id="chat-header">
+        <span>🤖</span>
+        <span>RAG AI Assistant</span>
+      </div>
+      <div id="chat-window">
+        <div
+          style="
+            text-align: center;
+            color: #666;
+            padding: 32px 16px;
+            font-style: italic;
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 12px;
+            border: 2px dashed rgba(102, 126, 234, 0.2);
+            margin: 16px 0;
+          "
+        >
+          <div style="font-size: 2.5rem; margin-bottom: 12px;">🤖✨</div>
+          <div style="font-size: 1.1rem; font-weight: 600; color: #4a5568; margin-bottom: 6px;">
+            Welcome to RAG AI Assistant!
+          </div>
+          <div style="font-size: 0.9rem; line-height: 1.5;">
+            👋 Hello! Upload some documents or add web sources, then ask me anything about them.<br>
+            I'll help you find insights and answer questions based on your content.
+          </div>
+        </div>
+      </div>
+      <form
+        id="chat-form"
+        hx-post="/chat"
+        hx-target="#chat-window"
+        hx-swap="beforeend"
+        hx-trigger="submit"
+
+        autocomplete="off"
+      >
+        <input
+          type="text"
+          name="query"
+          placeholder="Type your question here..."
+          required
+          autofocus
+        />
+        <button type="submit" class="btn-primary">Send ✨</button>
+      </form>
+    </div>
+
+    <script>
+      // Chat form handling
+      document.addEventListener('DOMContentLoaded', function() {
+        const chatForm = document.getElementById('chat-form');
+        const chatWindow = document.getElementById('chat-window');
+        
+        // Handle chat form submission
+        chatForm.addEventListener('htmx:beforeRequest', function(event) {
+          const query = this.query.value.trim();
+          if (!query) {
+            event.preventDefault();
+            return false;
+          }
+          
+          // Add user message
+          const userMsg = document.createElement('div');
+          userMsg.className = 'user-message';
+          userMsg.textContent = query;
+          chatWindow.appendChild(userMsg);
+          
+          // Add typing indicator
+          const typingIndicator = document.createElement('div');
+          typingIndicator.className = 'typing-indicator';
+          typingIndicator.id = 'typing-indicator';
+          typingIndicator.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+          chatWindow.appendChild(typingIndicator);
+          
+          chatWindow.scrollTop = chatWindow.scrollHeight;
+          // Clear the input box immediately after sending
+          this.query.value = '';
+        });
+        
+        // Handle successful response
+        chatForm.addEventListener('htmx:afterRequest', function(event) {
+          // Remove typing indicator
+          const typingIndicator = document.getElementById('typing-indicator');
+          if (typingIndicator) typingIndicator.remove();
+          
+          this.reset();
+          
+          // Process markdown in assistant messages
+          const assistantMessages = chatWindow.querySelectorAll('.assistant-message[data-markdown]');
+          assistantMessages.forEach(msg => {
+            if (msg.dataset.markdown && !msg.dataset.rendered) {
+              msg.innerHTML = marked.parse(msg.dataset.markdown);
+              msg.dataset.rendered = 'true';
+            }
+          });
+          
+          chatWindow.scrollTop = chatWindow.scrollHeight;
+          this.query.focus();
+        });
+        
+        // Handle errors
+        chatForm.addEventListener('htmx:responseError', function(event) {
+          // Remove typing indicator on error
+          const typingIndicator = document.getElementById('typing-indicator');
+          if (typingIndicator) typingIndicator.remove();
+          
+          // Add error message
+          const errorMsg = document.createElement('div');
+          errorMsg.className = 'assistant-message error-message';
+          errorMsg.innerHTML = '⚠️ Sorry, I encountered an error while processing your request. Please try again.';
+          chatWindow.appendChild(errorMsg);
+          chatWindow.scrollTop = chatWindow.scrollHeight;
+          this.query.focus();
+        });
+        
+        // Handle source form submissions
+        const sourceForm = document.querySelector('form[hx-post="/add-source"]');
+        const fileForm = document.querySelector('form[hx-post="/add-file"]');
+        const clearButton = document.querySelector('button[hx-post="/clear-sources"]');
+        
+        function refreshSources() {
+          htmx.trigger('#sources-list', 'refresh');
+        }
+        
+        if (sourceForm) {
+          sourceForm.addEventListener('htmx:afterRequest', function(event) {
+            if (event.detail.successful) {
+              this.reset();
+              setTimeout(refreshSources, 1000);
+            }
+          });
+        }
+        
+        if (fileForm) {
+          fileForm.addEventListener('htmx:afterRequest', function(event) {
+            if (event.detail.successful) {
+              this.reset();
+              setTimeout(refreshSources, 1000);
+            }
+          });
+        }
+        
+        if (clearButton) {
+          clearButton.addEventListener('htmx:afterRequest', function(event) {
+            if (event.detail.successful) {
+              setTimeout(refreshSources, 500);
+            }
+          });
+        }
+
+        // File size validation
+        const fileInput = document.getElementById('file-input');
+        const fileInfo = document.getElementById('file-info');
+        let maxFileSize = 10 * 1024 * 1024; // Default 10MB
+        let maxFileSizeMB = 10;
+
+        // Load config from server
+        fetch('/config')
+          .then(response => response.json())
+          .then(config => {
+            maxFileSize = config.maxFileSize;
+            maxFileSizeMB = config.maxFileSizeMB;
+            
+            // Update the UI with actual limits
+            const limitText = document.getElementById('file-size-limit');
+            if (limitText) {
+              limitText.textContent = `Max size: ${maxFileSizeMB}MB • Formats: PDF, MD, TXT`;
+            }
+          })
+          .catch(err => console.warn('Could not load config:', err));
+
+        function formatFileSize(bytes) {
+          if (bytes === 0) return '0 B';
+          const k = 1024;
+          const sizes = ['B', 'KB', 'MB', 'GB'];
+          const i = Math.floor(Math.log(bytes) / Math.log(k));
+          return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        if (fileInput && fileInfo) {
+          fileInput.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+              const fileSize = formatFileSize(file.size);
+              const isValidSize = file.size <= maxFileSize;
+              
+              fileInfo.innerHTML = `
+                <div style="color: ${isValidSize ? '#48bb78' : '#f56565'};">
+                  📁 ${file.name} (${fileSize})
+                  ${isValidSize ? '✅ Valid' : `❌ Too large - max ${maxFileSizeMB}MB`}
+                </div>
+              `;
+              
+              // Disable/enable submit button based on file size
+              const submitBtn = fileForm.querySelector('button[type="submit"]');
+              if (submitBtn) {
+                submitBtn.disabled = !isValidSize;
+                submitBtn.style.opacity = isValidSize ? '1' : '0.5';
+                submitBtn.style.pointerEvents = isValidSize ? 'auto' : 'none';
+              }
+            } else {
+              fileInfo.innerHTML = '';
+            }
+          });
+        }
+      });
+    </script>
+  </body>
+</html>
